@@ -13,6 +13,7 @@ dependencies = [
   "matplotlib",
   "scikit-learn",
   "torch",
+  "manim",
 ]
 
 [project.optional-dependencies]

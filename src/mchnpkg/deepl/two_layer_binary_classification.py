@@ -1,11 +1,13 @@
 import torch
 
 
-def binary_classification(d: int,
-                          n: int,
-                          epochs: int = 10000,
-                          eta: float = 0.001,
-                          seed: int = 0):
+def binary_classification(
+    d: int,
+    n: int,
+    epochs: int = 10000,
+    eta: float = 0.001,
+    seed: int = 0,
+):
     """
     Binary classification with manual gradient descent using PyTorch autograd.
 
@@ -19,6 +21,11 @@ def binary_classification(d: int,
     Returns:
         W1, W2, W3, W4: trained weight matrices (torch.Tensor)
         losses: list of loss values per epoch (length = epochs)
+        W1_hist, W2_hist, W3_hist, W4_hist: weight history tensors (CPU) for every epoch
+            W1_hist shape: (epochs, d, 48)
+            W2_hist shape: (epochs, 48, 16)
+            W3_hist shape: (epochs, 16, 32)
+            W4_hist shape: (epochs, 32, 1)
     """
 
     # Device (GPU if available)
@@ -34,8 +41,7 @@ def binary_classification(d: int,
     # -----------------------------
     X = torch.randn(n, d, dtype=torch.float32, device=device)
 
-    # Label rule (edit this line if your homework specifies a different rule)
-    # Example: label = 1 if sum of all features > 2 else 0
+    # Label rule: label = 1 if sum of features > 2 else 0
     Y = (X.sum(dim=1, keepdim=True) > 2).float()
 
     # -----------------------------
@@ -62,11 +68,20 @@ def binary_classification(d: int,
         return -(y * torch.log(yhat) + (1 - y) * torch.log(1 - yhat)).mean()
 
     # -----------------------------
+    # Store weights for every epoch (for animation)
+    # Keep history on CPU to avoid GPU memory issues
+    # -----------------------------
+    W1_hist = torch.zeros((epochs, d, 48), device="cpu", dtype=torch.float32)
+    W2_hist = torch.zeros((epochs, 48, 16), device="cpu", dtype=torch.float32)
+    W3_hist = torch.zeros((epochs, 16, 32), device="cpu", dtype=torch.float32)
+    W4_hist = torch.zeros((epochs, 32, 1), device="cpu", dtype=torch.float32)
+
+    # -----------------------------
     # Training loop
     # -----------------------------
     losses = []
 
-    for _ in range(epochs):
+    for i in range(epochs):
         # Forward
         a1 = torch.sigmoid(X @ W1)
         a2 = torch.sigmoid(a1 @ W2)
@@ -85,5 +100,20 @@ def binary_classification(d: int,
                 p -= eta * p.grad
                 p.grad.zero_()
 
-    # Return trained weights as tensors + losses
-    return W1.detach(), W2.detach(), W3.detach(), W4.detach(), losses
+        # Save updated weights after this epoch
+        W1_hist[i] = W1.detach().cpu().clone()
+        W2_hist[i] = W2.detach().cpu().clone()
+        W3_hist[i] = W3.detach().cpu().clone()
+        W4_hist[i] = W4.detach().cpu().clone()
+
+    return (
+        W1.detach(),
+        W2.detach(),
+        W3.detach(),
+        W4.detach(),
+        losses,
+        W1_hist,
+        W2_hist,
+        W3_hist,
+        W4_hist,
+    )
