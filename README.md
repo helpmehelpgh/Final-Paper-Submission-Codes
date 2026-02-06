@@ -1,32 +1,76 @@
-# CPE 487/587 – HW1: Binary Classification with Gradient Descent (PyTorch)
+# DLHW2 — CPE 487/587 Homework 2 (Training a Neural Network)
 
-This project implements a gradient-descent based binary classifier using PyTorch autograd.
-It provides a function `binary_classification` and a demo script that trains the model and saves
-a loss-vs-epochs plot as a timestamped PDF file.
+This repository contains the Homework 2 implementation for CPE 487/587.
+It extends the UV-based package structure from Homework 01 and adds weight-matrix visualization
+animations for the learned weights.
+
+---
 
 ## Project Structure
 
-- `src/mchnpkg/deepl/two_layer_binary_classification.py`  
-  Contains the function `binary_classification(...)`
-- `src/mchnpkg/__init__.py` and `src/mchnpkg/deepl/__init__.py`  
-  Package initialization for imports
-- `scripts/binaryclassification_impl.py`  
-  Demonstrates training and generates the loss plot PDF
+```text
+DLHW2/
+├─ pyproject.toml
+├─ README.md
+├─ uv.lock
+├─ scripts/
+│  ├─ binaryclassification_impl.py
+│  ├─ binaryclassification_animate_impl.py
+├─ src/
+│  └─ mchnpkg/
+│     ├─ __init__.py
+│     ├─ deepl/
+│     │  ├─ __init__.py
+│     │  └─ two_layer_binary_classification.py
+│     └─ animation/
+│        ├─ __init__.py
+│        ├─ weight_animation.py
+│        └─ largewt_animation.py
+└─ .gitignore
 
-## Requirements
-
-- Python 3.11+ (recommended: Python 3.12)
-- `uv` package manager
-
-## Install (UV)
+Install (UV)
 
 From the project root:
 
-```bash
-# create virtual environment
-uv python install 3.12
-uv venv --python 3.12
-source .venv/bin/activate
-
-# install dependencies from pyproject.toml
 uv sync
+
+Why do we need clone() when saving weight history?
+
+When we store weights at each epoch, we must freeze a snapshot of the tensor at that moment.
+If we save without clone(), the saved tensor can still share underlying storage or be affected by later updates.
+That can cause earlier history entries to accidentally reflect newer weight values.
+
+Using:
+
+W.detach().cpu().clone()
+
+creates an independent copy in new memory, so each W*_hist[i] truly contains the weight values from epoch i.
+This is required to build a correct animation over time.
+
+How to execute HW02Q7 and generate .mp4 animations
+
+This part generates 4 animations (one per weight matrix W1–W4) using the 3D weight histories
+returned by binary_classification().
+
+1) Run the animation script
+
+From the project root:
+
+uv run python scripts/binaryclassification_animate_impl.py
+
+
+The script trains the model and then creates 4 videos using:
+
+animate_weight_heatmap(W1_hist, ...)
+
+animate_weight_heatmap(W2_hist, ...)
+
+animate_weight_heatmap(W3_hist, ...)
+
+animate_weight_heatmap(W4_hist, ...)
+
+2) Where the .mp4 files are saved
+
+Manim writes outputs under:
+
+./media/videos/

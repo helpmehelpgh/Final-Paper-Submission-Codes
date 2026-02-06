@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Manim outputs (do not commit)
+media/
+media/videos/
+media/images/
+media/texts/
