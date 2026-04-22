@@ -1,228 +1,280 @@
-# HW03Part07 - Cruise Control State Classifier
+# Final Paper Submission Codes
 
-This repository contains the solution for **Section 7: Cruise Control State Classifier** from HW03.
-
-The goal of this part is to build a **binary classifier** that predicts whether **Adaptive Cruise Control (ACC)** is enabled or not from vehicle time-history signals.
+## Project Title
+**Deep Learning-Based Engineering Characterization of Seismic Waveforms for Ground-Motion Screening**
 
 ## Overview
+This repository contains the Python codes developed for the paper on engineering-oriented seismic waveform screening using the **STanford EArthquake Dataset (STEAD)**. The study uses a **one-dimensional convolutional neural network (1D-CNN)** to classify raw three-component seismic waveforms for three tasks:
 
-This part was solved in **three different versions** to improve performance by changing:
+1. **Binary earthquake-versus-noise classification**
+2. **Balanced four-class magnitude classification**
+3. **Balanced four-class source-to-station distance classification**
 
-- model setup
-- epochs
-- feature design
-- training parameters
+The main objective is to demonstrate that raw seismic waveforms can be used not only for signal discrimination but also for broader engineering-oriented source characterization before more computationally expensive structural or seismic-response analyses are performed.
 
-The implemented work includes:
+---
 
-- preprocessing of decoded CAN signal files
-- matching front-left wheel speed with ACC status
-- binary target construction
-- zero-order hold label alignment
-- lagged time-history feature construction
-- train/test split and scaling
-- training and evaluation of multiple classifier versions
-- loss and accuracy plots
-- ONNX model export
-- inference script
+## Repository Structure
 
-The classifier predicts:
+```text
+DLHW2Par8/
+│
+├── stead_full/
+│   ├── src/
+│   │   ├── config_full.py
+│   │   ├── dataset_full.py
+│   │   ├── model.py
+│   │   ├── model_shallow.py
+│   │   ├── inspect_full.py
+│   │   ├── prepare_full_metadata.py
+│   │   ├── train_binary_full.py
+│   │   ├── evaluate_binary_full.py
+│   │   ├── train_magnitude_full_balanced.py
+│   │   ├── evaluate_magnitude_full_balanced.py
+│   │   ├── train_distance_full_balanced.py
+│   │   ├── evaluate_distance_full_balanced.py
+│   │   ├── draw_figure2_from_dataset.py
+│   │   ├── draw_figure3_class_distributions.py
+│   │   ├── draw_figure4_training_history.py
+│   │   ├── draw_combined_confusion_matrices.py
+│   │   ├── Binary_full.py
+│   │   ├── Figure_6.py
+│   │   ├── Figure_7.py
+│   │   └── Figure_8.py
+│   │
+│   └── results/
+│       ├── metadata/
+│       ├── models/
+│       ├── figures/
+│       └── tables/
+│
+└── README.md
+```
 
-- **1** if ACC status = **6**
-- **0** otherwise
+---
 
 ## Dataset
 
-Dataset path used:
+This project uses the **merged STEAD dataset**, which contains:
 
-```bash
-/data/CPE_487-587/ACCDataset
+- **1,265,657** total waveform records
+- **1,030,231** local-earthquake traces
+- **235,426** noise traces
+- **3 waveform components**
+- **6000 samples per waveform**
+- **100 Hz sampling rate**
+
+### Main metadata fields used
+- `trace_category`
+- `trace_name`
+- `source_magnitude`
+- `source_distance_km`
+- `p_arrival_sample`
+- `s_arrival_sample`
+- `snr_db`
+
+### Dataset location used in the project
+The codes assume the STEAD files are stored on Lovelace in:
+
+```text
+~/STEAD_FULL/
 ```
 
-For the first implementation, the following files were used from each experiment:
+with:
+- `merge.csv`
+- `merge.hdf5`
 
-- `*_wheel_speed_fl.csv`
-- matching `*_acc_status.csv`
+---
 
-For the improved versions, additional signals were included:
+## Tasks Implemented
 
-- `*_relative_vel.csv`
-- `*_lead_distance.csv`
-- `*_accely.csv`
+### 1. Binary Classification
+Classifies a waveform as:
+- **Noise**
+- **Earthquake**
 
-A total of **13 matched experiments** were found and processed.
+### 2. Magnitude Classification
+Balanced four-class magnitude classification:
+- `M < 2`
+- `2 ≤ M < 3`
+- `3 ≤ M < 4`
+- `M ≥ 4`
 
-## Data Preparation
+### 3. Distance Classification
+Balanced four-class source-to-station distance classification:
+- `d < 50 km`
+- `50 ≤ d < 100 km`
+- `100 ≤ d < 200 km`
+- `d ≥ 200 km`
 
-The preprocessing pipeline performs the following steps:
+---
 
-1. Read the `Time` and `Message` columns from each decoded signal file.
-2. Convert front-left wheel speed from **km/h** to **m/s**.
-3. Convert ACC status into a binary label:
-   - `1` if status is `6`
-   - `0` otherwise
-4. Remove duplicate ACC timestamps.
-5. Align labels and additional signals to the wheel-speed timeline using **zero-order hold**.
-6. Construct historical lag features.
+## Main Model
 
-## Implemented Versions
+The primary model used in the study is a **1D-CNN** that takes raw three-component seismic waveforms as input. The model is trained separately for the three tasks above using the same general architecture, with the output layer adapted to the corresponding number of classes.
 
-### Version 1
+A shallower baseline model is also included in:
 
-The first version uses only front-left wheel speed history:
-
-- `v_t`
-- `v_t-1`
-- ...
-- `v_t-10`
-
-This version produced a strong result, and in one of the completed runs the accuracy was about **87%**.
-
-### Version 2
-
-The second version uses multiple signals and more derived features:
-
-- current values of speed, relative velocity, lead distance, and longitudinal acceleration
-- lagged histories
-- first-difference features
-- rolling mean and rolling standard deviation
-
-This version was created to improve the model by using richer information. In another completed run, the obtained accuracy was about **78%**.
-
-### Version 3
-
-The third version keeps the richer multi-signal setup but uses:
-
-- smaller history length
-- a smaller and more regularized model
-- different epochs and learning-rate settings
-- modified training configuration to reduce overfitting
-
-In another completed run, the obtained accuracy was about **83%**.
-
-## Files
-
-Main files created for this part:
-
-- `src/mchnpkg/deepl/acc_module.py`
-- `src/mchnpkg/deepl/acc_module_v2.py`
-- `src/mchnpkg/deepl/acc_module_v3.py`
-- `scripts/acc_impl.py`
-- `scripts/acc_impl.sh`
-- `scripts/acc_inference.py`
-- `scripts/acc_impl_v2.py`
-- `scripts/acc_impl_v3.py`
-
-## Example Run Commands
-
-### Version 1
-
-```bash
-export PYTHONPATH=src
-python scripts/acc_impl.py \
-  --data_dir /data/CPE_487-587/ACCDataset \
-  --output_dir results/acc_test \
-  --k 10 \
-  --sample_size 300000 \
-  --test_size 0.2 \
-  --epochs 5 \
-  --batch_size 256 \
-  --lr 0.001 \
-  --num_workers 2
+```text
+stead_full/src/model_shallow.py
 ```
 
-### Version 2
+---
+
+## Environment and Dependencies
+
+The project was developed in **Python 3.12** and uses:
+
+- `numpy`
+- `pandas`
+- `matplotlib`
+- `h5py`
+- `torch`
+- `scikit-learn`
+
+Install the main dependencies with:
 
 ```bash
-export PYTHONPATH=src
-python scripts/acc_impl_v2.py \
-  --data_dir /data/CPE_487-587/ACCDataset \
-  --output_dir results/acc_v2_test \
-  --k 10 \
-  --sample_size 300000 \
-  --test_ratio 0.2 \
-  --epochs 10 \
-  --batch_size 256 \
-  --lr 0.001 \
-  --num_workers 2
+pip install numpy pandas matplotlib h5py torch scikit-learn
 ```
 
-### Version 3
+---
+
+## How to Run
+
+### Step 1: Prepare metadata
+Generate the metadata files needed for training and evaluation:
 
 ```bash
-export PYTHONPATH=src
-python scripts/acc_impl_v3.py \
-  --data_dir /data/CPE_487-587/ACCDataset \
-  --output_dir results/acc_v3_test \
-  --k 5 \
-  --sample_size 300000 \
-  --test_ratio 0.2 \
-  --epochs 10 \
-  --batch_size 256 \
-  --lr 0.0005 \
-  --num_workers 2
+python stead_full/src/prepare_full_metadata.py
 ```
 
-## Inference
+This creates balanced and task-specific metadata files inside:
 
-After training, inference can be run using the ONNX model from Version 1:
+```text
+stead_full/results/metadata/
+```
+
+---
+
+### Step 2: Inspect the dataset
+Optional check of the merged STEAD dataset:
 
 ```bash
-export PYTHONPATH=src
-python scripts/acc_inference.py \
-  --onnx_model results/acc_test/accnet.onnx \
-  --features 0.1 0.2 0.3 0.25 0.24 0.22 0.21 0.20 0.18 0.17 0.15
+python stead_full/src/inspect_full.py
 ```
 
-The 11 input values correspond to:
+---
 
-- `v_t`
-- `v_t-1`
-- ...
-- `v_t-10`
+### Step 3: Train the models
 
-## Output Directories
+#### Binary classification
+```bash
+python stead_full/src/train_binary_full.py
+```
 
-The results from the three solved versions can be found in these directories:
+#### Magnitude classification
+```bash
+python stead_full/src/train_magnitude_full_balanced.py
+```
 
-- `results/acc_test`
-- `results/acc_v2_test`
-- `results/acc_v3_test`
+#### Distance classification
+```bash
+python stead_full/src/train_distance_full_balanced.py
+```
 
-These folders contain output files such as:
+Saved trained models are written to:
 
-- accuracy plots
-- loss plots
-- ONNX models
-- summary files
+```text
+stead_full/results/models/
+```
 
-Examples include:
+---
 
-- `acc_accuracy.png`
-- `acc_loss.png`
-- `accnet.onnx`
-- `summary.txt`
-- `acc_v2_accuracy.png`
-- `acc_v2_loss.png`
-- `accnet_v2.onnx`
-- `acc_v3_accuracy.png`
-- `acc_v3_loss.png`
-- `accnet_v3.onnx`
+### Step 4: Evaluate the models
 
-## Summary of Results
+#### Binary evaluation
+```bash
+python stead_full/src/evaluate_binary_full.py
+```
 
-This part was solved in **three different versions** by changing epochs and other parameters in order to improve classification accuracy.
+#### Magnitude evaluation
+```bash
+python stead_full/src/evaluate_magnitude_full_balanced.py
+```
 
-Observed results from the completed runs were approximately:
+#### Distance evaluation
+```bash
+python stead_full/src/evaluate_distance_full_balanced.py
+```
 
-- **Version 1:** about **87%**
-- **Version 2:** about **78%**
-- **Version 3:** about **83%**
+These scripts generate:
+- classification reports
+- confusion matrices
+- performance summaries
 
-Therefore, the first version gave the strongest accuracy among the tested configurations, while the later versions were useful for exploring richer features, different train/test strategies, and regularization choices.
+Outputs are saved in:
 
-## Notes
+```text
+stead_full/results/figures/
+stead_full/results/tables/
+```
 
-The different versions were intentionally kept to compare how feature design, history length, model complexity, and training parameters affect the final ACC classification performance.
+---
 
-This makes the work useful not only as a final classifier, but also as an experimental comparison of three solution strategies.
+## Figure Generation
+
+The repository also includes scripts used to generate the figures reported in the manuscript.
+
+
+Generated figures are saved in:
+
+```text
+stead_full/results/figures/
+```
+
+---
+
+## Results Summary
+
+Main reported results from the paper:
+
+- **Binary earthquake-versus-noise classification**  
+  Validation accuracy: **98.84%**
+
+- **Balanced magnitude classification**  
+  Validation accuracy: **65.66%**
+
+- **Balanced distance classification**  
+  Validation accuracy: **71.46%**
+
+These results indicate a clear hierarchy of task difficulty:
+- binary classification is easiest,
+- distance classification is moderately difficult,
+- magnitude classification is the most challenging.
+
+The results also show that **balanced learning is important**, since imbalanced datasets can produce misleadingly strong overall accuracy while masking weak performance in less frequent classes.
+
+---
+
+## Where the Main Outputs Exist
+
+### Metadata files
+```text
+stead_full/results/metadata/
+```
+
+### Trained models
+```text
+stead_full/results/models/
+```
+
+### Figures
+```text
+stead_full/results/figures/
+```
+
+### Tables / summaries
+```text
+stead_full/results/tables/
+```
